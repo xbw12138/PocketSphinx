@@ -10,6 +10,7 @@ import edu.cmu.pocketsphinx.demo.RecognitionListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.hardware.Camera;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.Vibrator;
@@ -21,6 +22,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.xbw.yydemo.util.PocketSphinxUtil;
+import android.hardware.Camera.Parameters;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private YyService serviceBinder;
     // Handles the connection between the service and activity
     private ServiceConnection mConnection;
+    // 打开闪光灯
+    boolean islight=false;
+    Camera camera = Camera.open();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,7 +52,21 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void YyR(String s) {
                         //Log.d("daodi显示吗","chaoi "+s);
-                        Toast.makeText(MainActivity.this,"哈哈哈"+s,Toast.LENGTH_LONG).show();
+                        if (!islight&&s.equals("开灯")) {
+                            Parameters mParameters = camera.getParameters();
+                            mParameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                            camera.setParameters(mParameters);
+                            camera.startPreview();
+                            islight = true;
+                            Toast.makeText(MainActivity.this,"哈哈哈"+s,Toast.LENGTH_LONG).show();
+                        } else if(islight&&s.equals("关灯")){
+                            Parameters mParameters = camera.getParameters();
+                            mParameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                            camera.setParameters(mParameters);
+                            camera.stopPreview();
+                            islight = false;
+                            Toast.makeText(MainActivity.this,"哈哈哈"+s,Toast.LENGTH_LONG).show();
+                        }
                     }
                 });
             }
@@ -58,44 +77,21 @@ public class MainActivity extends AppCompatActivity {
         };
         Intent bindIntent = new Intent(this, YyService.class);
         bindService(bindIntent, mConnection, Context.BIND_AUTO_CREATE);
-        //Intent startIntent = new Intent(this, YyService.class);
         startService(bindIntent);
-        initView();
-        //registerReceiver();
-    }
-    private void registerReceiver() {
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("com.xbw.yydemo.YyService");
-        MainActivity.this.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Bundle bundle = intent.getExtras();
-                Log.d("", "count_data=" + bundle
-                        .getInt("hh") + "");
-                Toast.makeText(MainActivity.this,bundle
-                        .getInt("hh"),Toast.LENGTH_LONG).show();
-            }
-        }, intentFilter);
-    }
-    private void initView(){
-        tx1 = (TextView) findViewById(R.id.textView);
-        btn1 = (Button) findViewById(R.id.button);
-        btn1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-            }
-        });
+        //finish();
     }
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindService(mConnection);
     }
+    //震动
     private void wakeVibrator(){
         vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
         long [] pattern = {100,400,100,400};
         vibrator.vibrate(pattern,-1);
     }
+    //唤醒屏幕
     private void wakeAndUnlock()
     {
         //获取电源管理器对象
